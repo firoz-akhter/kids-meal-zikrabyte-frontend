@@ -161,7 +161,7 @@ export default function AdminMenusPage() {
                       </Box>
 
                       <Typography variant="body2" color="text.secondary">
-                        <p>dates here</p>
+                        dates here,,
                         {/* {format(new Date(menu.weekStartDate), "MMM dd")} -{" "}
                         {format(new Date(menu.weekEndDate), "MMM dd, yyyy")} */}
                       </Typography>
