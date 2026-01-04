@@ -23,21 +23,41 @@ import {
   Select,
   MenuItem,
   Grid,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  Tooltip,
 } from "@mui/material";
-import { Search } from "@mui/icons-material";
-// import api from "@/lib/api";
+import {
+  Search,
+  Pause,
+  PlayArrow,
+  Cancel,
+  Visibility,
+} from "@mui/icons-material";
+import { useRouter } from "next/navigation";
 import api from "../../../lib/api";
 import { format } from "date-fns";
 
 export default function AdminSubscriptionsPage() {
+  const router = useRouter();
   const [subscriptions, setSubscriptions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [actionDialog, setActionDialog] = useState(false);
+  const [actionType, setActionType] = useState<"pause" | "cancel" | null>(null);
+  const [selectedSubscription, setSelectedSubscription] = useState<any>(null);
+  const [reason, setReason] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
     fetchSubscriptions();
@@ -46,6 +66,7 @@ export default function AdminSubscriptionsPage() {
   const fetchSubscriptions = async () => {
     try {
       setLoading(true);
+      setError("");
       const response = await api.get("/subscriptions/admin/all", {
         params: {
           page: page + 1,
@@ -56,23 +77,25 @@ export default function AdminSubscriptionsPage() {
       });
       setSubscriptions(response.data.data.subscriptions);
       setTotalCount(response.data.total || 0);
-    } catch (err) {
+    } catch (err: any) {
       setError(err.response?.data?.message || "Failed to load subscriptions");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSearch = (event) => {
+  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchQuery(event.target.value);
     setPage(0);
   };
 
-  const handleChangePage = (event, newPage) => {
+  const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
   };
 
-  const handleChangeRowsPerPage = (event) => {
+  const handleChangeRowsPerPage = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
@@ -89,13 +112,87 @@ export default function AdminSubscriptionsPage() {
     return () => clearTimeout(delaySearch);
   }, [searchQuery]);
 
-  const getStatusColor = (status) => {
-    switch (status) {
+  const handleAction = (subscription: any, type: "pause" | "cancel") => {
+    setSelectedSubscription(subscription);
+    setActionType(type);
+    setActionDialog(true);
+    setReason("");
+  };
+
+  const confirmAction = async () => {
+    if (!selectedSubscription || !actionType) return;
+
+    try {
+      setActionLoading(true);
+      setError("");
+      setSuccess("");
+
+      if (actionType === "pause") {
+        await api.put(
+          `/subscriptions/${selectedSubscription._id}/pauseByAdmin`,
+          {
+            reason,
+          }
+        );
+        setSuccess(
+          `Subscription for ${selectedSubscription.child?.name} has been paused successfully`
+        );
+      } else if (actionType === "cancel") {
+        await api.put(`/subscriptions/${selectedSubscription._id}/cancel`, {
+          reason,
+        });
+        setSuccess(
+          `Subscription for ${selectedSubscription.child?.name} has been cancelled successfully`
+        );
+      }
+
+      setActionDialog(false);
+      setReason("");
+      setSelectedSubscription(null);
+      await fetchSubscriptions();
+    } catch (err: any) {
+      console.error("Error:", err);
+      setError(
+        err.response?.data?.message || `Failed to ${actionType} subscription`
+      );
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleResume = async (subscription: any) => {
+    if (
+      !confirm(
+        `Are you sure you want to resume subscription for ${subscription.child?.name}?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setError("");
+      setSuccess("");
+      // console.log("resume/cancel", subscription._id);
+      // return;
+      await api.put(`/subscriptions/${subscription._id}/resumeByAdmin`);
+      setSuccess(
+        `Subscription for ${subscription.child?.name} has been resumed successfully`
+      );
+      await fetchSubscriptions();
+    } catch (err: any) {
+      console.error("Error:", err);
+      setError(err.response?.data?.message || "Failed to resume subscription");
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
       case "active":
         return "success";
       case "paused":
         return "warning";
       case "cancelled":
+      case "canceled":
         return "error";
       case "expired":
         return "default";
@@ -116,8 +213,14 @@ export default function AdminSubscriptionsPage() {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }}>
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError("")}>
           {error}
+        </Alert>
+      )}
+
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess("")}>
+          {success}
         </Alert>
       )}
 
@@ -195,46 +298,124 @@ export default function AdminSubscriptionsPage() {
                     <TableCell>
                       <strong>Status</strong>
                     </TableCell>
+                    <TableCell align="center">
+                      <strong>Actions</strong>
+                    </TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {subscriptions.map((sub) => (
-                    <TableRow key={sub._id} hover>
-                      <TableCell>
-                        <Box>
-                          <Typography variant="body2">
-                            {sub.parent?.name}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            {sub.parent?.mobile}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell>{sub.child?.name}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={sub.planType}
-                          size="small"
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell>{sub.mealType}</TableCell>
-                      <TableCell>
-                        {format(new Date(sub.startDate), "MMM dd, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        {format(new Date(sub.endDate), "MMM dd, yyyy")}
-                      </TableCell>
-                      <TableCell>₹{sub.price}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={sub.status}
-                          color={getStatusColor(sub.status)}
-                          size="small"
-                        />
+                  {subscriptions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={9} align="center">
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          py={4}
+                        >
+                          No subscriptions found
+                        </Typography>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  ) : (
+                    subscriptions.map((sub) => (
+                      <TableRow key={sub._id} hover>
+                        <TableCell>
+                          <Box>
+                            <Typography variant="body2">
+                              {sub.parent?.name}
+                            </Typography>
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                            >
+                              {sub.parent?.mobile}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell>{sub.child?.name}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={sub.planType}
+                            size="small"
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          {/* {sub.mealType === "both"
+                            ? "Lunch & Snacks"
+                            : sub.mealType.charAt(0).toUpperCase() +
+                              sub.mealType.slice(1)} */}
+                          -
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(sub.startDate), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          {format(new Date(sub.endDate), "MMM dd, yyyy")}
+                        </TableCell>
+                        <TableCell>
+                          {/* ₹{sub.price.toLocaleString("en-IN")} */}-
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={sub.status.toUpperCase()}
+                            color={getStatusColor(sub.status)}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell align="center">
+                          <Box display="flex" justifyContent="center" gap={0.5}>
+                            {/* <Tooltip title="View Details">
+                              <IconButton
+                                size="small"
+                                color="primary"
+                                onClick={() =>
+                                  router.push(`/admin/subscriptions/${sub._id}`)
+                                }
+                              >
+                                <Visibility fontSize="small" />
+                              </IconButton>
+                            </Tooltip> */}
+
+                            {sub.status === "active" && (
+                              <>
+                                <Tooltip title="Pause Subscription">
+                                  <IconButton
+                                    size="small"
+                                    color="warning"
+                                    onClick={() => handleAction(sub, "pause")}
+                                  >
+                                    <Pause fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                {/* <Tooltip title="Cancel Subscription">
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={() => handleAction(sub, "cancel")}
+                                  >
+                                    <Cancel fontSize="small" />
+                                  </IconButton>
+                                </Tooltip> */}
+                              </>
+                            )}
+
+                            {sub.status === "paused" && (
+                              <Tooltip title="Resume Subscription">
+                                <IconButton
+                                  size="small"
+                                  color="success"
+                                  onClick={() => handleResume(sub)}
+                                >
+                                  <PlayArrow fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
                 </TableBody>
               </Table>
             </TableContainer>
@@ -251,6 +432,71 @@ export default function AdminSubscriptionsPage() {
           </>
         )}
       </Card>
+
+      {/* Action Dialog */}
+      <Dialog
+        open={actionDialog}
+        onClose={() => {
+          if (!actionLoading) {
+            setActionDialog(false);
+            setReason("");
+            setSelectedSubscription(null);
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          {actionType === "pause" ? "Pause" : "Cancel"} Subscription
+        </DialogTitle>
+        <DialogContent>
+          <Typography gutterBottom>
+            Are you sure you want to {actionType} the subscription for{" "}
+            <strong>{selectedSubscription?.child?.name}</strong>?
+          </Typography>
+          {actionType === "cancel" && (
+            <Alert severity="warning" sx={{ mt: 2, mb: 2 }}>
+              Note: As per our policy, no refunds will be provided for cancelled
+              subscriptions.
+            </Alert>
+          )}
+          <TextField
+            fullWidth
+            multiline
+            rows={3}
+            label="Reason (optional)"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            sx={{ mt: 2 }}
+            placeholder={`Why are you ${actionType}ing this subscription?`}
+            disabled={actionLoading}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => {
+              setActionDialog(false);
+              setReason("");
+              setSelectedSubscription(null);
+            }}
+            disabled={actionLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color={actionType === "pause" ? "warning" : "error"}
+            onClick={confirmAction}
+            disabled={actionLoading}
+          >
+            {actionLoading ? (
+              <CircularProgress size={24} color="inherit" />
+            ) : (
+              `Confirm ${actionType === "pause" ? "Pause" : "Cancel"}`
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

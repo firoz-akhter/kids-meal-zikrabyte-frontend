@@ -53,6 +53,7 @@ export default function PaymentsPage() {
   const fetchSummary = async () => {
     try {
       const response = await api.get("/payments/summary");
+      console.log("response summary", response);
       setSummary(response.data.data.summary);
     } catch (err) {
       console.error("Failed to fetch summary:", err);

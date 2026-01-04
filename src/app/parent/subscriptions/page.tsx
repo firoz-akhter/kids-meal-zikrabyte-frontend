@@ -56,6 +56,7 @@ export default function SubscriptionsPage() {
 
   const handleResume = async (id) => {
     try {
+      console.log("handleResume", id);
       await api.put(`/subscriptions/${id}/resume`);
       fetchSubscriptions();
     } catch (err) {

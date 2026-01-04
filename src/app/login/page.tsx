@@ -174,6 +174,9 @@ export default function LoginPage() {
             <Typography variant="caption" display="block">
               <strong>Admin:</strong> admin@kidsmeals.com / Admin@123
             </Typography>
+            <Typography variant="caption" display="block">
+              <strong>Parent:</strong> parent@gmail.com / 123456
+            </Typography>
           </Box>
 
           {/* Register Link */}

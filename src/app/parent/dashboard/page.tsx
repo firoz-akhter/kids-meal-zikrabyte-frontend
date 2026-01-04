@@ -11,6 +11,8 @@ import {
   Chip,
   CircularProgress,
   Alert,
+  Divider,
+  Paper,
 } from "@mui/material";
 import {
   ChildCare,
@@ -18,19 +20,22 @@ import {
   Restaurant,
   TrendingUp,
   Add,
+  MenuBook,
+  CalendarMonth,
 } from "@mui/icons-material";
 import { useRouter } from "next/navigation";
-// import api from "@/lib/api";
 import api from "../../../lib/api";
 
 export default function ParentDashboard() {
   const router = useRouter();
   const [dashboard, setDashboard] = useState(null);
+  const [publishedMenu, setPublishedMenu] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     fetchDashboard();
+    fetchMenus();
   }, []);
 
   const fetchDashboard = async () => {
@@ -42,6 +47,35 @@ export default function ParentDashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchMenus = async () => {
+    try {
+      const response = await api.get("/menus/parent/all");
+      const menus = response.data.data.menus;
+
+      // Find the first published menu
+      const published = menus.find((menu) => menu.isPublished === true);
+
+      if (published) {
+        setPublishedMenu(published);
+        console.log("Published menu:", published);
+      }
+    } catch (err) {
+      console.error("Failed to load menus:", err);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const getDayLabel = (day) => {
+    return day.charAt(0).toUpperCase() + day.slice(1);
   };
 
   if (loading) {
@@ -281,6 +315,178 @@ export default function ParentDashboard() {
           )}
         </CardContent>
       </Card>
+
+      {/* Published Weekly Menu */}
+      {publishedMenu && (
+        <Card sx={{ mb: 4 }}>
+          <CardContent>
+            <Box
+              display="flex"
+              justifyContent="space-between"
+              alignItems="center"
+              mb={2}
+            >
+              <Box display="flex" alignItems="center" gap={1}>
+                <MenuBook color="primary" />
+                <Typography variant="h6" fontWeight="bold">
+                  This Week's Menu
+                </Typography>
+              </Box>
+              <Chip
+                icon={<CalendarMonth />}
+                label={`Week ${publishedMenu.weekNumber}, ${publishedMenu.year}`}
+                color="primary"
+                variant="outlined"
+              />
+            </Box>
+
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                📅 {formatDate(publishedMenu.weekStartDate)} -{" "}
+                {formatDate(publishedMenu.weekEndDate)}
+              </Typography>
+              {publishedMenu.publishedBy && (
+                <Typography variant="caption" color="text.secondary">
+                  Published by {publishedMenu.publishedBy.name} on{" "}
+                  {formatDate(publishedMenu.publishedAt)}
+                </Typography>
+              )}
+            </Box>
+
+            <Divider sx={{ my: 2 }} />
+
+            <Grid container spacing={2}>
+              {Object.entries(publishedMenu.days).map(([day, meals]) => {
+                const hasLunch = meals.lunch && meals.lunch.length > 0;
+                const hasSnacks = meals.snacks && meals.snacks.length > 0;
+
+                // Skip days with no meals
+                if (!hasLunch && !hasSnacks) return null;
+
+                return (
+                  <Grid item xs={12} sm={6} md={4} lg={3} key={day}>
+                    <Paper
+                      sx={{
+                        p: 2,
+                        height: "100%",
+                        bgcolor: "background.default",
+                        border: 1,
+                        borderColor: "divider",
+                        borderRadius: 2,
+                      }}
+                    >
+                      <Typography
+                        variant="subtitle1"
+                        fontWeight="bold"
+                        color="primary"
+                        gutterBottom
+                      >
+                        {getDayLabel(day)}
+                      </Typography>
+
+                      {hasLunch && (
+                        <Box sx={{ mb: 1.5 }}>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            display="flex"
+                            alignItems="center"
+                            gap={0.5}
+                            gutterBottom
+                          >
+                            🍱 Lunch
+                          </Typography>
+                          {meals.lunch.map((item, idx) => (
+                            <Box key={idx} sx={{ mb: 0.5 }}>
+                              <Typography variant="body2" fontWeight="medium">
+                                {item.name}
+                              </Typography>
+                              {item.description && (
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {item.description}
+                                </Typography>
+                              )}
+                              <Box sx={{ display: "flex", gap: 0.5, mt: 0.5 }}>
+                                <Chip
+                                  label={
+                                    item.category === "veg" ? "Veg" : "Non-Veg"
+                                  }
+                                  size="small"
+                                  color={
+                                    item.category === "veg"
+                                      ? "success"
+                                      : "error"
+                                  }
+                                  sx={{ height: 20, fontSize: "0.7rem" }}
+                                />
+                              </Box>
+                            </Box>
+                          ))}
+                        </Box>
+                      )}
+
+                      {hasSnacks && (
+                        <Box>
+                          <Typography
+                            variant="caption"
+                            color="text.secondary"
+                            display="flex"
+                            alignItems="center"
+                            gap={0.5}
+                            gutterBottom
+                          >
+                            🍪 Snacks
+                          </Typography>
+                          {meals.snacks.map((item, idx) => (
+                            <Box key={idx}>
+                              <Typography variant="body2" fontWeight="medium">
+                                {item.name}
+                              </Typography>
+                              {item.description && (
+                                <Typography
+                                  variant="caption"
+                                  color="text.secondary"
+                                >
+                                  {item.description}
+                                </Typography>
+                              )}
+                              <Box sx={{ display: "flex", gap: 0.5, mt: 0.5 }}>
+                                <Chip
+                                  label={
+                                    item.category === "veg" ? "Veg" : "Non-Veg"
+                                  }
+                                  size="small"
+                                  color={
+                                    item.category === "veg"
+                                      ? "success"
+                                      : "error"
+                                  }
+                                  sx={{ height: 20, fontSize: "0.7rem" }}
+                                />
+                              </Box>
+                            </Box>
+                          ))}
+                        </Box>
+                      )}
+                    </Paper>
+                  </Grid>
+                );
+              })}
+            </Grid>
+
+            {publishedMenu.notes && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: "info.light", borderRadius: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  📝 Note: {publishedMenu.notes}
+                </Typography>
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Alerts */}
       {dashboard?.alerts?.expiringSubscriptions?.length > 0 && (
