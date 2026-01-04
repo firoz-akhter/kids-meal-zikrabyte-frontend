@@ -113,7 +113,7 @@ export default function ViewMenuPage() {
             />
           </Box>
           <Typography variant="body1" color="text.secondary">
-            <p>dates go here</p>
+            dates go here
             {/* {format(new Date(menu.weekStartDate), "MMM dd")} -{" "}
             {format(new Date(menu.weekEndDate), "MMM dd, yyyy")} */}
           </Typography>
