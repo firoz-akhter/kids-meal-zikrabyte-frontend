@@ -49,7 +49,7 @@
     "src/app/parent/payments/page.jsx",
     "src/app/parent/subscriptions/page.jsx",
     "src/app/parent/subscriptions/create/page.jsx",
-    "src/app/parent/subscriptions/[id]/page.jsx",
+    "src/app/parent/subscriptions/[id]/page.tsx",
     "src/app/register/page.jsx",
     "src/app/parent/layout.jsx",
     "src/components/layout/AdminSidebar.jsx",
