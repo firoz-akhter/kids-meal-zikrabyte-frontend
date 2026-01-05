@@ -29,6 +29,7 @@ import api from "../../../lib/api";
 export default function ParentDashboard() {
   const router = useRouter();
   const [dashboard, setDashboard] = useState(null);
+  // console.log("dashboard,,", dashboard);
   const [publishedMenu, setPublishedMenu] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
