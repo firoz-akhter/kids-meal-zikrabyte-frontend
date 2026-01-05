@@ -1,4 +1,4 @@
-🍱 Kids Meal Subscription Platform - Frontend
+Kids Meal Subscription Platform - Frontend
 A comprehensive web application for managing kids' meal subscriptions in schools. Built with Next.js, TypeScript, and Material-UI, this platform provides separate portals for parents and administrators to manage meal subscriptions, deliveries, and payments.
 
 📋 Table of Contents
@@ -10,10 +10,6 @@ Available Scripts
 User Roles
 Key Features
 Deployment
-API Integration
-Screenshots
-Contributing
-License\
 
 <!-- ============================================================= -->
 
@@ -156,3 +152,7 @@ Menu Management
     Assign meals to specific days
     Publish/Unpublish menus
     View menu history
+
+🚀 Deployment
+Deployed on vercel
+url ==> https://kids-meal-zikrabyte-frontend.vercel.app/
